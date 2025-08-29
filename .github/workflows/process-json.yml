@@ -28,6 +28,7 @@ jobs:
         env:
           GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
         run: |
+          echo "Secret length: ${#GDRIVE_SA_KEY}"
           if [ -z "$GDRIVE_SA_KEY" ]; then
             echo "GDRIVE_SA_KEY secret is empty"; exit 1
           fi
