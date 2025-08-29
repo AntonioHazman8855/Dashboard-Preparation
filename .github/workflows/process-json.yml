@@ -40,6 +40,10 @@ jobs:
           echo "${{ secrets.GDRIVE_SA_KEY }}" | sed 's/\\n/\n/g' > sa.json
             cat sa.json
 
+      - name: Debug — List repo contents
+        run: |
+          ls -l
+          
       - name: Run processing script
         env:
           SA_FILE: sa.json
