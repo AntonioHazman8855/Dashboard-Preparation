@@ -86,7 +86,7 @@ def preprocess_df(main_df):
 
 def upload_csv_to_drive(sa_file, local_csv_path, sheet_name, folder_id=None, make_public=True):
     SCOPES = ['https://www.googleapis.com/auth/drive']
-    creds = service_account.Credentials.from_service_account_file(sa_file, scopes=SCOPES)
+    creds = service_account.Credentials.from_service_account_file("sa.json", scopes=SCOPES)
     drive_service = build('drive', 'v3', credentials=creds, cache_discovery=False)
 
     # If a file with same name exists, delete it first (keeps things simple)
