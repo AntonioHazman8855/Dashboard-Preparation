@@ -13,7 +13,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 # ---------- Config (can be overridden by env vars in GitHub Actions) ----------
-JSON_GLOB = os.environ.get("JSON_GLOB", "**/*.json")   # glob pattern to find JSON files in repo
+JSON_GLOB = os.environ.get("JSON_GLOB", "*.json")   # glob pattern to find JSON files in repo
 OUTPUT_NAME = os.environ.get("OUTPUT_NAME", "processed_data.csv")
 SHEET_FILE_NAME = os.environ.get("SHEET_FILE_NAME", "processed_data")  # used for Google Sheet name (no ext)
 SA_FILE = os.environ.get("SA_FILE", "sa.json")  # service account json file path (written by the workflow)
