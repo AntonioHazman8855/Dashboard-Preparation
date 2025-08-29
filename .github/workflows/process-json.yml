@@ -24,16 +24,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas google-auth google-auth-httplib2 google-auth-oauthlib google-api-python-client
 
+      - name: Debug secret length
+        run: |
+          echo "Secret length: ${#GDRIVE_SA_KEY}"
+        env:
+          GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
+
       - name: Save service account JSON (from secret)
         env:
           GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
         run: |
-          echo "Secret length: ${#GDRIVE_SA_KEY}"
           if [ -z "$GDRIVE_SA_KEY" ]; then
             echo "GDRIVE_SA_KEY secret is empty"; exit 1
           fi
           echo "${{ secrets.GDRIVE_SA_KEY }}" | sed 's/\\n/\n/g' > sa.json
-          cat sa.json
+            cat sa.json
 
       - name: Run processing script
         env:
