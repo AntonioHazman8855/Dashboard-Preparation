@@ -1,0 +1,4 @@
+on:
+  schedule:
+    - cron: "0 7 * * *"   # 15:00 Asia/Makassar
+  workflow_dispatch:      # 👈 this lets you run manually
