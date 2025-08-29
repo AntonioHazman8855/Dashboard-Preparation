@@ -43,7 +43,7 @@ jobs:
       - name: Run processing script
         env:
           SA_FILE: sa.json
-          JSON_GLOB: ${{ secrets.JSON_GLOB }}   # optional secret or set here directly, e.g. 'data/*.json'
+          JSON_GLOB: "*.json"    # optional secret or set here directly, e.g. 'data/*.json'
           OUTPUT_NAME: processed_data.csv
           SHEET_FILE_NAME: processed_data
           DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}  # optional: secret with folder ID
