@@ -43,6 +43,15 @@ jobs:
       - name: Debug — List repo contents
         run: |
           ls -l
+
+      - name: Validate SA JSON
+        run: |
+          cat sa.json | jq . > /dev/null
+
+      - name: Debug SA JSON
+        run: |
+          cat sa.json
+          cat sa.json | jq .
           
       - name: Run processing script
         env:
