@@ -1,4 +1,46 @@
+name: Process JSON & Upload CSV
+
 on:
   schedule:
     - cron: "0 7 * * *"   # 15:00 Asia/Makassar
-  workflow_dispatch:      # 👈 this lets you run manually
+  workflow_dispatch:      # 👈 this lets you trigger manually in GitHub Actions tab
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas google-auth google-auth-httplib2 google-auth-oauthlib google-api-python-client
+
+      - name: Decode service account JSON (from secret)
+        env:
+          GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
+        run: |
+          if [ -z "$GDRIVE_SA_KEY" ]; then
+            echo "GDRIVE_SA_KEY secret is empty"; exit 1
+          fi
+          echo "$GDRIVE_SA_KEY" | base64 --decode > sa.json
+          ls -l sa.json
+
+      - name: Run processing script
+        env:
+          SA_FILE: sa.json
+          JSON_GLOB: ${{ secrets.JSON_GLOB }}   # optional secret or set here directly, e.g. 'data/*.json'
+          OUTPUT_NAME: processed_data.csv
+          SHEET_FILE_NAME: processed_data
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}  # optional: secret with folder ID
+          MAKE_PUBLIC: "true"   # set to "false" if you don't want public link
+        run: |
+          python fetch_and_upload.py
