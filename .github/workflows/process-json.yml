@@ -57,6 +57,8 @@ jobs:
         env:
           SA_FILE: sa.json
           JSON_GLOB: "data/*.json"    # optional secret or set here directly, e.g. 'data/*.json'
+          API_URLS: "https://example.com/api/bookings,https://example.com/api/hotels"
+          USE_API: "false"
           OUTPUT_NAME: processed_data.csv
           SHEET_FILE_NAME: processed_data
           DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}  # optional: secret with folder ID
