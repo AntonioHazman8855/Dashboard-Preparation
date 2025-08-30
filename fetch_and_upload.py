@@ -15,6 +15,7 @@ from googleapiclient.http import MediaFileUpload
 
 # ---------- Config (can be overridden by env vars in GitHub Actions) ----------
 JSON_GLOB = os.environ.get("JSON_GLOB", "data/*.json")   # glob pattern to find JSON files in repo
+API_URLS = os.environ.get("API_URLS", "")
 OUTPUT_NAME = os.environ.get("OUTPUT_NAME", "processed_data.csv")
 SHEET_FILE_NAME = os.environ.get("SHEET_FILE_NAME", "1Pbur3A3ClQp2BKY8Iwtmub946SA6pH3GTiSw47f3CxI")  # used for Google Sheet name (no ext)
 SA_FILE = os.environ.get("SA_FILE", "sa.json")  # service account json file path (written by the workflow)
@@ -45,6 +46,21 @@ def find_json_files(glob_pattern):
         p for p in glob.glob(glob_pattern, recursive=True)
         if p.lower().endswith(".json") and os.path.basename(p) != os.path.basename(SA_FILE)
     ]
+
+def fetch_json_from_api(url):
+    print(f"Fetching from {url}")
+    r = requests.get(url, timeout=30)
+    r.raise_for_status()
+    data = r.json()
+    if isinstance(data, list):
+        return pd.json_normalize(data)
+    if isinstance(data, dict):
+        list_candidates = [v for v in data.values() if isinstance(v, list)]
+        for candidate in list_candidates:
+            if candidate and isinstance(candidate[0], dict):
+                return pd.json_normalize(candidate)
+        return pd.json_normalize([data])
+    return pd.DataFrame()
 
 def preprocess_df(main_df):
     main_df['net_amount_stay'] = main_df['net_amount_stay'] / 100
@@ -159,50 +175,96 @@ def upload_csv_to_sheet(sa_file, local_csv_path, sheet_id, worksheet_name="Sheet
 #     sheet_url = f"https://docs.google.com/spreadsheets/d/{file_id}"
 #     return sheet_url
 
-def main():
-    print("Finding JSON files with pattern:", JSON_GLOB)
-    files = find_json_files(JSON_GLOB)
-    if not files:
-        print("No JSON files found — exiting.")
-        sys.exit(1)
-    print(f"Found {len(files)} JSON files. Example: {files[:5]}")
+# def main():
+#     print("Finding JSON files with pattern:", JSON_GLOB)
+#     files = find_json_files(JSON_GLOB)
+#     if not files:
+#         print("No JSON files found — exiting.")
+#         sys.exit(1)
+#     print(f"Found {len(files)} JSON files. Example: {files[:5]}")
 
+#     dfs = []
+#     for p in files:
+#         print("Loading:", p)
+#         try:
+#             dfi = load_json_file(p)
+#             if dfi.empty:
+#                 print(" -> produced empty dataframe (skipping).")
+#                 continue
+#             # add provenance column
+#             dfi['_source_file'] = os.path.basename(p)
+#             dfs.append(dfi)
+#         except Exception as e:
+#             print("Error loading", p, e)
+
+#     if not dfs:
+#         print("No dataframes to concat — exiting.")
+#         sys.exit(1)
+
+#     df = pd.concat(dfs, ignore_index=True, sort=False)
+#     print("Combined dataframe shape:", df.shape)
+
+#     df = preprocess_df(df)
+#     print("After preprocess shape:", df.shape)
+
+#     # Write CSV to local file
+#     out_path = OUTPUT_NAME
+#     df.to_csv(out_path, index=False)
+#     print("Wrote CSV to", out_path)
+
+#     # Upload to Drive (convert to Google Sheet)
+#     if not os.path.exists(SA_FILE):
+#         print("Service account file not found:", SA_FILE)
+#         print("Make sure the Actions workflow writes the SA JSON to this path.")
+#         sys.exit(1)
+
+#     # sheet_url = upload_csv_to_sheet(SA_FILE, out_path, SHEET_FILE_NAME, folder_id=DRIVE_FOLDER_ID or None, make_public=MAKE_PUBLIC)
+#     sheet_url = upload_csv_to_sheet(SA_FILE, out_path, "1Pbur3A3ClQp2BKY8Iwtmub946SA6pH3GTiSw47f3CxI", worksheet_name="Sheet1")
+#     print("Sheet created at:", sheet_url)
+
+def main():
     dfs = []
-    for p in files:
-        print("Loading:", p)
-        try:
-            dfi = load_json_file(p)
-            if dfi.empty:
-                print(" -> produced empty dataframe (skipping).")
-                continue
-            # add provenance column
-            dfi['_source_file'] = os.path.basename(p)
-            dfs.append(dfi)
-        except Exception as e:
-            print("Error loading", p, e)
+    if API_URLS:
+        urls = [u.strip() for u in API_URLS.split(",") if u.strip()]
+        for url in urls:
+            try:
+                dfi = fetch_json_from_api(url)
+                if not dfi.empty:
+                    dfi["_source_api"] = url
+                    dfs.append(dfi)
+            except Exception as e:
+                print("Error fetching", url, e)
+    else:
+        print("Finding JSON files with pattern:", JSON_GLOB)
+        files = find_json_files(JSON_GLOB)
+        if not files:
+            print("No JSON files found — exiting.")
+            sys.exit(1)
+        for p in files:
+            print("Loading:", p)
+            try:
+                dfi = load_json_file(p)
+                if not dfi.empty:
+                    dfi["_source_file"] = os.path.basename(p)
+                    dfs.append(dfi)
+            except Exception as e:
+                print("Error loading", p, e)
 
     if not dfs:
-        print("No dataframes to concat — exiting.")
+        print("No data to process — exiting.")
         sys.exit(1)
 
     df = pd.concat(dfs, ignore_index=True, sort=False)
     print("Combined dataframe shape:", df.shape)
-
     df = preprocess_df(df)
     print("After preprocess shape:", df.shape)
+    df.to_csv(OUTPUT_NAME, index=False)
+    print("Wrote CSV to", OUTPUT_NAME)
 
-    # Write CSV to local file
-    out_path = OUTPUT_NAME
-    df.to_csv(out_path, index=False)
-    print("Wrote CSV to", out_path)
-
-    # Upload to Drive (convert to Google Sheet)
     if not os.path.exists(SA_FILE):
         print("Service account file not found:", SA_FILE)
-        print("Make sure the Actions workflow writes the SA JSON to this path.")
         sys.exit(1)
 
-    # sheet_url = upload_csv_to_sheet(SA_FILE, out_path, SHEET_FILE_NAME, folder_id=DRIVE_FOLDER_ID or None, make_public=MAKE_PUBLIC)
     sheet_url = upload_csv_to_sheet(SA_FILE, out_path, "1Pbur3A3ClQp2BKY8Iwtmub946SA6pH3GTiSw47f3CxI", worksheet_name="Sheet1")
     print("Sheet created at:", sheet_url)
 
