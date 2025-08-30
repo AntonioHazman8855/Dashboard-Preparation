@@ -37,7 +37,7 @@ jobs:
           if [ -z "$GDRIVE_SA_KEY" ]; then
             echo "GDRIVE_SA_KEY secret is empty"; exit 1
           fi
-          printf '%s' "${{ secrets.GDRIVE_SA_KEY }}" > sa.json
+          printf '%s' '${{ secrets.GDRIVE_SA_KEY }}' > sa.json
             cat sa.json
 
       - name: Debug — List repo contents
