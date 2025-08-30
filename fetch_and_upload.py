@@ -87,45 +87,80 @@ def preprocess_df(main_df):
                        (main_df['price_per_night'] <= 18000000), :]
     return main_df
 
-def upload_csv_to_drive(sa_file, local_csv_path, sheet_name, folder_id=None, make_public=True):
-    SCOPES = ['https://www.googleapis.com/auth/drive']
-    creds = service_account.Credentials.from_service_account_file("sa.json", scopes=SCOPES)
-    drive_service = build('drive', 'v3', credentials=creds, cache_discovery=False)
+import gspread
+import pandas as pd
+from google.oauth2 import service_account
 
-    # If a file with same name exists, delete it first (keeps things simple)
-    q = f"name = '{sheet_name}' and trashed = false"
-    res = drive_service.files().list(q=q, fields="files(id, name, mimeType)").execute()
-    for f in res.get("files", []):
-        try:
-            drive_service.files().delete(fileId=f["id"]).execute()
-            print(f"Deleted old file {f['name']} ({f['id']})")
-        except Exception as e:
-            print("Warning: couldn't delete old file:", e)
+def upload_csv_to_sheet(sa_file, local_csv_path, sheet_id, worksheet_name="Sheet1"):
+    SCOPES = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = service_account.Credentials.from_service_account_file(sa_file, scopes=SCOPES)
+    client = gspread.authorize(creds)
 
-    # Upload CSV and convert to Google Sheet
-    file_metadata = {'name': sheet_name, 'mimeType': 'application/vnd.google-apps.spreadsheet'}
-    if folder_id:
-        file_metadata['parents'] = [folder_id]
+    # Open the existing sheet
+    sh = client.open_by_key(sheet_id)
 
-    media = MediaFileUpload(local_csv_path, mimetype='text/csv', resumable=True)
-    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-    file_id = file.get('id')
-    print("Uploaded and converted file id:", file_id)
+    try:
+        ws = sh.worksheet(worksheet_name)
+    except gspread.exceptions.WorksheetNotFound:
+        # Create the worksheet if it doesn’t exist
+        ws = sh.add_worksheet(title=worksheet_name, rows="100", cols="20")
 
-    # Set permission so Looker Studio can access. If you prefer privacy, skip this and share manually.
-    # if make_public:
-    #     try:
-    #         drive_service.permissions().create(
-    #             fileId=file_id,
-    #             body={'type': 'anyone', 'role': 'reader'},
-    #             fields='id',
-    #         ).execute()
-    #         print("Set file to 'anyone with link' reader")
-    #     except Exception as e:
-    #         print("Warning: couldn't set public permission:", e)
+    # Read CSV into DataFrame
+    df = pd.read_csv(local_csv_path)
 
-    sheet_url = f"https://docs.google.com/spreadsheets/d/{file_id}"
+    # Clear old contents
+    ws.clear()
+
+    # Upload new data (including header)
+    ws.update([df.columns.values.tolist()] + df.values.tolist())
+
+    sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit#gid={ws.id}"
+    print(f"✅ Uploaded CSV to Google Sheet: {sheet_url}")
     return sheet_url
+
+    
+# def upload_csv_to_drive(sa_file, local_csv_path, sheet_name, folder_id=None, make_public=True):
+#     SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
+#     creds = service_account.Credentials.from_service_account_file("sa.json", scopes=SCOPES)
+#     drive_service = build('drive', 'v3', credentials=creds, cache_discovery=False)
+
+#     # If a file with same name exists, delete it first (keeps things simple)
+#     q = f"name = '{sheet_name}' and trashed = false"
+#     res = drive_service.files().list(q=q, fields="files(id, name, mimeType)").execute()
+#     for f in res.get("files", []):
+#         try:
+#             drive_service.files().delete(fileId=f["id"]).execute()
+#             print(f"Deleted old file {f['name']} ({f['id']})")
+#         except Exception as e:
+#             print("Warning: couldn't delete old file:", e)
+
+#     # Upload CSV and convert to Google Sheet
+#     file_metadata = {'name': sheet_name, 'mimeType': 'application/vnd.google-apps.spreadsheet'}
+#     if folder_id:
+#         file_metadata['parents'] = [folder_id]
+
+#     media = MediaFileUpload(local_csv_path, mimetype='text/csv', resumable=True)
+#     file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+#     file_id = file.get('id')
+#     print("Uploaded and converted file id:", file_id)
+
+#     # Set permission so Looker Studio can access. If you prefer privacy, skip this and share manually.
+#     # if make_public:
+#     #     try:
+#     #         drive_service.permissions().create(
+#     #             fileId=file_id,
+#     #             body={'type': 'anyone', 'role': 'reader'},
+#     #             fields='id',
+#     #         ).execute()
+#     #         print("Set file to 'anyone with link' reader")
+#     #     except Exception as e:
+#     #         print("Warning: couldn't set public permission:", e)
+
+#     sheet_url = f"https://docs.google.com/spreadsheets/d/{file_id}"
+#     return sheet_url
 
 def main():
     print("Finding JSON files with pattern:", JSON_GLOB)
