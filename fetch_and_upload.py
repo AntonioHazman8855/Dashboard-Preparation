@@ -16,7 +16,7 @@ from googleapiclient.http import MediaFileUpload
 # ---------- Config (can be overridden by env vars in GitHub Actions) ----------
 JSON_GLOB = os.environ.get("JSON_GLOB", "data/*.json")   # glob pattern to find JSON files in repo
 OUTPUT_NAME = os.environ.get("OUTPUT_NAME", "processed_data.csv")
-SHEET_FILE_NAME = os.environ.get("SHEET_FILE_NAME", "processed_data")  # used for Google Sheet name (no ext)
+SHEET_FILE_NAME = os.environ.get("SHEET_FILE_NAME", "1Pbur3A3ClQp2BKY8Iwtmub946SA6pH3GTiSw47f3CxI")  # used for Google Sheet name (no ext)
 SA_FILE = os.environ.get("SA_FILE", "sa.json")  # service account json file path (written by the workflow)
 DRIVE_FOLDER_ID = os.environ.get("DRIVE_FOLDER_ID", "")  # optional: put file into this folder
 MAKE_PUBLIC = os.environ.get("MAKE_PUBLIC", "true").lower() in ("1", "true", "yes")
@@ -203,7 +203,7 @@ def main():
         sys.exit(1)
 
     # sheet_url = upload_csv_to_sheet(SA_FILE, out_path, SHEET_FILE_NAME, folder_id=DRIVE_FOLDER_ID or None, make_public=MAKE_PUBLIC)
-    sheet_url = upload_csv_to_sheet(SA_FILE, out_path, SHEET_FILE_NAME, worksheet_name="Sheet1")
+    sheet_url = upload_csv_to_sheet(SA_FILE, out_path, "1Pbur3A3ClQp2BKY8Iwtmub946SA6pH3GTiSw47f3CxI", worksheet_name="Sheet1")
     print("Sheet created at:", sheet_url)
 
 if __name__ == "__main__":
