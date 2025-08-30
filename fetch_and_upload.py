@@ -203,7 +203,7 @@ def main():
         sys.exit(1)
 
     # sheet_url = upload_csv_to_sheet(SA_FILE, out_path, SHEET_FILE_NAME, folder_id=DRIVE_FOLDER_ID or None, make_public=MAKE_PUBLIC)
-    sheet_url = upload_csv_to_sheet(SA_FILE, out_path, sheet_id, worksheet_name="Sheet1")
+    sheet_url = upload_csv_to_sheet(SA_FILE, out_path, SHEET_FILE_NAME, worksheet_name="Sheet1")
     print("Sheet created at:", sheet_url)
 
 if __name__ == "__main__":
