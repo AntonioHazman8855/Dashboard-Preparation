@@ -88,7 +88,7 @@ def preprocess_df(main_df):
                        (main_df['price_per_night'] <= 18000000), :]
     return main_df
     
-def upload_csv_to_sheet(sa_file, local_csv_path, sheet_id, worksheet_name="Parsing_Data"):
+def upload_csv_to_sheet(sa_file, local_csv_path, sheet_id, worksheet_name="Sheet1"):
     SCOPES = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
@@ -202,7 +202,8 @@ def main():
         print("Make sure the Actions workflow writes the SA JSON to this path.")
         sys.exit(1)
 
-    sheet_url = upload_csv_to_drive(SA_FILE, out_path, SHEET_FILE_NAME, folder_id=DRIVE_FOLDER_ID or None, make_public=MAKE_PUBLIC)
+    # sheet_url = upload_csv_to_sheet(SA_FILE, out_path, SHEET_FILE_NAME, folder_id=DRIVE_FOLDER_ID or None, make_public=MAKE_PUBLIC)
+    sheet_url = upload_csv_to_sheet(SA_FILE, out_path, sheet_id, worksheet_name="Sheet1")
     print("Sheet created at:", sheet_url)
 
 if __name__ == "__main__":
