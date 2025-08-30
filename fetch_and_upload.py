@@ -40,7 +40,10 @@ def load_json_file(path):
     return pd.DataFrame()
 
 def find_json_files(glob_pattern):
-    return [p for p in glob.glob(glob_pattern, recursive=True) if p.lower().endswith(".json")]
+    return [
+        p for p in glob.glob(glob_pattern, recursive=True)
+        if p.lower().endswith(".json") and os.path.basename(p) != os.path.basename(SA_FILE)
+    ]
 
 def preprocess_df(main_df):
     main_df['net_amount_stay'] = main_df['net_amount_stay'] / 100
