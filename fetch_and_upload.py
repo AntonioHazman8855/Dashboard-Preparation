@@ -6,6 +6,7 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 import sys
+import gspread
 
 # Google API imports
 from google.oauth2 import service_account
@@ -86,12 +87,8 @@ def preprocess_df(main_df):
                        (main_df['net_amount_avail'] == 1) &
                        (main_df['price_per_night'] <= 18000000), :]
     return main_df
-
-import gspread
-import pandas as pd
-from google.oauth2 import service_account
-
-def upload_csv_to_sheet(sa_file, local_csv_path, sheet_id, worksheet_name="Sheet1"):
+    
+def upload_csv_to_sheet(sa_file, local_csv_path, sheet_id, worksheet_name="Parsing_Data"):
     SCOPES = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
