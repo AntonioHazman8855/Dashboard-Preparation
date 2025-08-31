@@ -55,6 +55,7 @@ def fetch_json_from_api(url):
     r = requests.get(url, timeout=30)
     r.raise_for_status()
     data = r.json()
+    headers = {}
 
     collected = []
     def normalize_json_to_df(jsondata):
