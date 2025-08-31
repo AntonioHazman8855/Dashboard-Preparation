@@ -7,15 +7,22 @@ from pathlib import Path
 from datetime import datetime
 import sys
 import gspread
+import requests
+import base64
 
 # Google API imports
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
+# owner = "AntonioHazman8855"
+# repo = "Histogram-Pictures"
+# path = ""   # path inside repo, leave empty for root
+# url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+
 # ---------- Config (can be overridden by env vars in GitHub Actions) ----------
 JSON_GLOB = os.environ.get("JSON_GLOB", "data/*.json")   # glob pattern to find JSON files in repo
-API_URLS = os.environ.get("API_URLS", "")
+API_URLS = os.environ.get("API_URLS", "https://api.github.com/repos/AntonioHazman8855/Histogram-Pictures/contents/")
 OUTPUT_NAME = os.environ.get("OUTPUT_NAME", "processed_data.csv")
 SHEET_FILE_NAME = os.environ.get("SHEET_FILE_NAME", "1Pbur3A3ClQp2BKY8Iwtmub946SA6pH3GTiSw47f3CxI")  # used for Google Sheet name (no ext)
 SA_FILE = os.environ.get("SA_FILE", "sa.json")  # service account json file path (written by the workflow)
@@ -26,19 +33,15 @@ MAKE_PUBLIC = os.environ.get("MAKE_PUBLIC", "true").lower() in ("1", "true", "ye
 def load_json_file(path):
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    # If data is a list of records
     if isinstance(data, list):
         return pd.json_normalize(data)
     # If data is dict: try to find the first list-of-dicts inside
     if isinstance(data, dict):
-        # common patterns: {"items": [ ... ]} or {"data": [ ... ]}
         list_candidates = [v for v in data.values() if isinstance(v, list)]
         for candidate in list_candidates:
             if candidate and isinstance(candidate[0], dict):
                 return pd.json_normalize(candidate)
-        # fallback: make single-row df
         return pd.json_normalize([data])
-    # Other types -> create empty df
     return pd.DataFrame()
 
 def find_json_files(glob_pattern):
@@ -48,8 +51,11 @@ def find_json_files(glob_pattern):
     ]
 
 def fetch_json_from_api(url):
+    token = "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"
+    headers = {"Authorization": f"token {token}"}
+    
     print(f"Fetching from {url}")
-    r = requests.get(url, timeout=30)
+    r = requests.get(url, timeout=30, headers=headers)
     r.raise_for_status()
     data = r.json()
     if isinstance(data, list):
@@ -72,18 +78,15 @@ def preprocess_df(main_df):
 
     main_df['lead_days'] = (main_df['check_in'] - main_df['booking_date']).dt.days
 
-    # Booking date features
     main_df['booking_day'] = main_df['booking_date'].dt.day
     main_df['booking_month'] = main_df['booking_date'].dt.month
     main_df['booking_year'] = main_df['booking_date'].dt.year
 
-    # Check-in date features
     main_df['check_in_day'] = main_df['check_in'].dt.day
     main_df['check_in_month'] = main_df['check_in'].dt.month
     main_df['check_in_year'] = main_df['check_in'].dt.year
     main_df['check_in_weekday'] = main_df['check_in'].dt.day_name() 
 
-    # Check-out date features
     main_df['check_out_day'] = main_df['check_out'].dt.day
     main_df['check_out_month'] = main_df['check_out'].dt.month
     main_df['check_out_year'] = main_df['check_out'].dt.year
@@ -114,20 +117,15 @@ def upload_csv_to_sheet(sa_file, local_csv_path, sheet_id, worksheet_name="Sheet
 
     # Open the existing sheet
     sh = client.open_by_key(sheet_id)
-
     try:
         ws = sh.worksheet(worksheet_name)
     except gspread.exceptions.WorksheetNotFound:
         # Create the worksheet if it doesn’t exist
         ws = sh.add_worksheet(title=worksheet_name, rows="100", cols="20")
 
-    # Read CSV into DataFrame
     df = pd.read_csv(local_csv_path)
-
     # Clear old contents
     ws.clear()
-
-    # Upload new data (including header)
     ws.update([df.columns.values.tolist()] + df.values.tolist())
 
     sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit#gid={ws.id}"
