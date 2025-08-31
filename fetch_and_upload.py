@@ -51,22 +51,86 @@ def find_json_files(glob_pattern):
     ]
 
 def fetch_json_from_api(url):
-    # token = "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"
-    # headers = {"Authorization": f"token {token}"}
-    
     print(f"Fetching from {url}")
     r = requests.get(url, timeout=30)
     r.raise_for_status()
     data = r.json()
+
+    collected = []
+    def normalize_json_to_df(jsondata):
+        # Normalize into a dataframe consistently
+        if isinstance(jsondata, list):
+            return pd.json_normalize(jsondata)
+        if isinstance(jsondata, dict):
+            # try to find first list-of-dicts inside dict
+            list_candidates = [v for v in jsondata.values() if isinstance(v, list)]
+            for candidate in list_candidates:
+                if candidate and isinstance(candidate[0], dict):
+                    return pd.json_normalize(candidate)
+            # otherwise wrap single dict
+            return pd.json_normalize([jsondata])
+        return pd.DataFrame()
+
+    # Case: top-level is a list -> probably repo contents metadata
     if isinstance(data, list):
-        return pd.json_normalize(data)
-    if isinstance(data, dict):
-        list_candidates = [v for v in data.values() if isinstance(v, list)]
-        for candidate in list_candidates:
-            if candidate and isinstance(candidate[0], dict):
-                return pd.json_normalize(candidate)
-        return pd.json_normalize([data])
-    return pd.DataFrame()
+        for entry in data:
+            # only files, only .json
+            if entry.get("type") != "file":
+                continue
+            name = entry.get("name", "")
+            if not name.lower().endswith(".json"):
+                continue
+            dl = entry.get("download_url")
+            if dl:
+                resp = requests.get(dl, headers=headers, timeout=30)
+                resp.raise_for_status()
+                try:
+                    jsondata = resp.json()
+                except ValueError:
+                    # maybe plain text — try loads
+                    jsondata = json.loads(resp.text)
+            else:
+                # fallback: fetch via file API url asking for raw
+                api_file_url = entry.get("url")
+                hdr = dict(headers)
+                hdr["Accept"] = "application/vnd.github.v3.raw"
+                resp = requests.get(api_file_url, headers=hdr, timeout=30)
+                resp.raise_for_status()
+                try:
+                    jsondata = resp.json()
+                except ValueError:
+                    jsondata = json.loads(resp.text)
+
+            df = normalize_json_to_df(jsondata)
+            if not df.empty:
+                df["_source_file"] = entry.get("path", name)
+                collected.append(df)
+
+    # Case: top-level is a dict -> could be a single file metadata or the actual JSON content
+    elif isinstance(data, dict):
+        # file metadata (has 'type' and 'name')
+        if data.get("type") == "file" and data.get("name","").lower().endswith(".json"):
+            dl = data.get("download_url")
+            if dl:
+                resp = requests.get(dl, headers=headers, timeout=30)
+                resp.raise_for_status()
+                try:
+                    jsondata = resp.json()
+                except ValueError:
+                    jsondata = json.loads(resp.text)
+                df = normalize_json_to_df(jsondata)
+                if not df.empty:
+                    df["_source_file"] = data.get("path", data.get("name"))
+                    collected.append(df)
+        else:
+            # maybe the URL returned the JSON content itself (e.g., you passed raw file url)
+            df = normalize_json_to_df(data)
+            if not df.empty:
+                collected.append(df)
+
+    if not collected:
+        return pd.DataFrame()
+    return pd.concat(collected, ignore_index=True, sort=False)
 
 def preprocess_df(main_df):
     main_df['net_amount_stay'] = main_df['net_amount_stay'] / 100
