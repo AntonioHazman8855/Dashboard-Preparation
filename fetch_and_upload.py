@@ -320,8 +320,9 @@ def main():
     print("Combined dataframe shape:", df.shape)
     df = preprocess_df(df)
     print("After preprocess shape:", df.shape)
-    df.to_csv(OUTPUT_NAME, index=False)
-    print("Wrote CSV to", OUTPUT_NAME)
+    out_path = OUTPUT_NAME
+    df.to_csv(out_path, index=False)
+    print("Wrote CSV to", out_path)
 
     if not os.path.exists(SA_FILE):
         print("Service account file not found:", SA_FILE)
