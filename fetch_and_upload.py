@@ -51,11 +51,11 @@ def find_json_files(glob_pattern):
     ]
 
 def fetch_json_from_api(url):
-    token = "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"
-    headers = {"Authorization": f"token {token}"}
+    # token = "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"
+    # headers = {"Authorization": f"token {token}"}
     
     print(f"Fetching from {url}")
-    r = requests.get(url, timeout=30, headers=headers)
+    r = requests.get(url, timeout=30)
     r.raise_for_status()
     data = r.json()
     if isinstance(data, list):
