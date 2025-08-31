@@ -57,7 +57,7 @@ jobs:
         env:
           SA_FILE: sa.json
           JSON_GLOB: "data/*.json"    # optional secret or set here directly, e.g. 'data/*.json'
-          API_URLS: "https://example.com/api/bookings,https://example.com/api/hotels"
+          API_URLS: "https://api.github.com/repos/AntonioHazman8855/Histogram-Pictures/contents/"
           USE_API: "true"
           OUTPUT_NAME: processed_data.csv
           SHEET_FILE_NAME: processed_data
