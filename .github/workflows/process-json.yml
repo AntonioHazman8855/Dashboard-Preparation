@@ -2,7 +2,7 @@ name: Process JSON & Upload CSV
 
 on:
   schedule:
-    - cron: "* * * * *"   # 15:00 Asia/Makassar
+    - cron: "0 3 * * *"   # 11:00 Bali (UTC+8)
   workflow_dispatch:  
 
 jobs:
