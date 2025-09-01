@@ -2,8 +2,8 @@ name: Process JSON & Upload CSV
 
 on:
   schedule:
-    - cron: "0 7 * * *"   # 15:00 Asia/Makassar
-  workflow_dispatch:      # 👈 this lets you trigger manually in GitHub Actions tab
+    - cron: "* * * * *"   # 15:00 Asia/Makassar
+  workflow_dispatch:  
 
 jobs:
   process:
