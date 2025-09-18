@@ -1,8 +1,8 @@
 name: Process JSON & Upload CSV
 
 on:
-  schedule:
-    - cron: "0 3 * * *"   # 11:00 Bali (UTC+8)
+  # schedule:
+  #   - cron: "0 3 * * *"   # 11:00 Bali (UTC+8)
   workflow_dispatch:  
 
 jobs:
